@@ -9,13 +9,13 @@ build:
 hex: build
     avr-objcopy -O ihex -R .eeprom target/avr-none/debug/uno-blink.elf target/avr-none/debug/uno-blink.hex
 
-# Build the firmware and open de:volt; upload the generated HEX in its Sketch tab.
-simulate: hex
-    xdg-open 'https://sim.devoltapp.com/?guest=1'
-
 # Size-optimized firmware for flashing to a physical Uno.
 release:
     cargo build --release
+
+# Produce the release HEX file for the browser simulator.
+release-hex: release
+    avr-objcopy -O ihex -R .eeprom target/avr-none/release/uno-blink.elf target/avr-none/release/uno-blink.hex
 
 # Build and upload to a physical Uno using ravedude's Cargo runner.
 flash:
