@@ -20,3 +20,7 @@ release-hex: release
 # Build and upload to a physical Uno using ravedude's Cargo runner.
 flash:
     cargo run --release
+
+# Replace the running firmware with LED-off, power-down firmware. Flash to resume.
+stop:
+    cargo run --release --bin uno-stop

@@ -2,13 +2,21 @@
 name = "uno-blink"
 version = "0.1.0"
 edition = "2021"
+default-run = "uno-blink"
 
 [[bin]]
 name = "uno-blink"
 test = false
 bench = false
 
+[[bin]]
+name = "uno-stop"
+path = "src/bin/stop.rs"
+test = false
+bench = false
+
 [dependencies]
+avr-device = "0.8.1"
 panic-halt = "1.0.0"
 
 [dependencies.arduino-hal]
