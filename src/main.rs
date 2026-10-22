@@ -8,6 +8,12 @@ fn main() -> ! {
     let peripherals = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(peripherals);
 
+    let serial = arduino_hal::default_serial!(peripherals, pins, 57600);
+    uno_blink::put_console(serial);
+    uno_blink::print!("Uno ");
+    uno_blink::println!("blink ready at {} baud", 57600u32);
+    uno_blink::println!();
+
     let mut led = pins.d13.into_output();
 
     loop {

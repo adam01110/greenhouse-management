@@ -902,6 +902,7 @@ dependencies = [
  "arduino-hal",
  "avr-device",
  "panic-halt",
+ "ufmt",
 ]
 
 [[package]]
