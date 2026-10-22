@@ -5,6 +5,10 @@ use panic_halt as _;
 
 #[arduino_hal::entry]
 fn main() -> ! {
+    #[expect(
+        clippy::unwrap_used,
+        reason = "Entry runs once, before any peripherals have been taken."
+    )]
     let peripherals = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(peripherals);
 
@@ -12,11 +16,13 @@ fn main() -> ! {
     led.set_low();
 
     avr_device::interrupt::disable();
-    // SM=010 selects power-down; SE enables the sleep instruction.
-    peripherals
-        .CPU
-        .smcr()
-        .write(|w| unsafe { w.sm().bits(0b010).se().set_bit() });
+    peripherals.CPU.smcr().write(|w| {
+        // SAFETY: 0b010 is the ATmega328P's power-down mode; SE enables sleep.
+        #[expect(unsafe_code, reason = "The PAC exposes the sleep-mode bits as unsafe.")]
+        unsafe {
+            w.sm().bits(0b010).se().set_bit()
+        }
+    });
 
     loop {
         avr_device::asm::sleep();
