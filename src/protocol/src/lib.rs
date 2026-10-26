@@ -18,28 +18,24 @@ impl MoistureRaw {
         }
     }
 
-    /// Returns the uncalibrated ADC value.
     #[must_use]
     pub const fn get(self) -> u16 {
         self.0
     }
 }
 
-/// Telemetry sent by a device; error messages are not defined yet.
+/// Device telemetry with wrapping millisecond uptime.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Message {
-    /// A `DATA` frame containing a measurement and the current pump state.
     Data {
         /// Device identifier, independent of the serial port.
         device_id: u8,
         /// Device uptime in milliseconds, wrapping after `u32::MAX`.
         uptime_ms: u32,
-        /// Uncalibrated soil-moisture ADC reading.
         moisture_raw: MoistureRaw,
-        /// Whether the firmware reports the pump as on (wire value 1) or off (0).
+        /// Reported output command, not physical pump feedback.
         pump_on: bool,
     },
-    /// An `HB` frame reporting device liveness without a measurement.
     Heartbeat {
         /// Device identifier, independent of the serial port.
         device_id: u8,

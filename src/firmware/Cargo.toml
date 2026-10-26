@@ -56,20 +56,15 @@ unsafe_code = "deny"
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 
-# Permit boolean matches instead of requiring if/else.
 match_bool = "allow"
 single_match_else = "allow"
 
-# Prefer borrowing values that are not consumed.
 needless_pass_by_value = "warn"
 
-# Permit explicit crate-scoped visibility.
 redundant_pub_crate = "allow"
 
-# Permit fused floating-point operations; measurements do not use lockstep simulation.
 suboptimal_flops = "warn"
 
-# Flag potentially panicking operations.
 string_slice = "warn"
 indexing_slicing = "warn"
 unwrap_used = "warn"
@@ -82,35 +77,29 @@ unwrap_in_result = "warn"
 unchecked_time_subtraction = "warn"
 panic_in_result_fn = "warn"
 
-# Flag discarded results and futures.
 let_underscore_future = "warn"
 let_underscore_must_use = "warn"
 unused_result_ok = "warn"
 map_err_ignore = "warn"
 assertions_on_result_states = "warn"
 
-# Check async and shared-state usage.
 await_holding_lock = "warn"
 await_holding_refcell_ref = "warn"
 large_futures = "warn"
 
-# Prefer normal destruction over explicitly leaking values.
 mem_forget = "warn"
 
-# Require documented, narrowly scoped unsafe operations.
 undocumented_unsafe_blocks = "warn"
 multiple_unsafe_ops_per_block = "warn"
 unnecessary_safety_doc = "warn"
 unnecessary_safety_comment = "warn"
 
-# Check numeric comparisons, literals and sign-changing casts.
 float_cmp = "warn"
 float_cmp_const = "warn"
 lossy_float_literal = "warn"
 cast_sign_loss = "warn"
 invalid_upcast_comparisons = "warn"
 
-# Flag suspicious conversions, hidden mutation and debug output.
 rc_mutex = "warn"
 debug_assert_with_mut_call = "warn"
 iter_not_returning_iterator = "warn"
@@ -118,6 +107,5 @@ expl_impl_clone_on_copy = "warn"
 infallible_try_from = "warn"
 dbg_macro = "warn"
 
-# Prefer expect attributes with a reason over blanket allow attributes.
 allow_attributes = "warn"
 allow_attributes_without_reason = "warn"

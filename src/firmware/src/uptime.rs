@@ -13,13 +13,18 @@ static MILLIS: Mutex<Cell<u32>> = Mutex::new(Cell::new(0));
 pub fn init(timer: arduino_hal::pac::TC0) {
     timer.tccr0b().write(|w| w.cs0().no_clock());
     timer.timsk0().reset();
+
     timer.tccr0a().write(|w| w.wgm0().ctc());
     timer.tcnt0().write(|w| w.set(0));
+
     // CTC counts 0 through OCR: 16 MHz / 64 / (249 + 1) = 1 kHz.
     timer.ocr0a().write(|w| w.set(249));
+
     // OCF0A is write-one-to-clear; don't modify other pending flags.
     timer.tifr0().write(|w| w.ocf0a().set_bit());
+
     interrupt::free(|cs| MILLIS.borrow(cs).set(0));
+
     timer.timsk0().write(|w| w.ocie0a().set_bit());
     timer.tccr0b().write(|w| w.cs0().prescale_64());
 }
