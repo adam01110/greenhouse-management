@@ -7,10 +7,13 @@ The planned system measures soil moisture and controls watering locally on the
 Uno. A Rust server receives measurements over UART, stores them in SQLite and
 exposes a read-only HTTP API for a browser dashboard.
 
-Currently, the firmware provides a blink example, a UART console and a power-down
-program. The shared protocol library defines telemetry types; the server remains
-a scaffold. Irrigation, data storage, the HTTP API and the dashboard are not
-implemented yet.
+Currently, the firmware provides a timer-driven blink, a UART console and a
+power-down program. The shared protocol library defines and encodes DATA/HB
+messages; the server remains a scaffold. Irrigation, live telemetry, data
+storage, the HTTP API and the dashboard are not implemented yet.
+
+See [implementation choices](docs/implementation-choices.md) for the reasoning
+behind the workspace, protocol and UART design, and the limits of the checks.
 
 ## Layout
 
