@@ -44,7 +44,7 @@ macro_rules! print {
     };
 }
 
-/// Writes to the console with a CRLF newline, ignoring UART write errors.
+/// Ignores UART write errors. Formatted calls append LF; the empty form emits CRLF.
 #[macro_export]
 macro_rules! println {
     () => {
