@@ -4,10 +4,13 @@
   perSystem = _: {
     treefmt = {
       settings.global.excludes = [
-        ".envrc"
+        # keep-sorted start
         ".direnv/**"
+        ".envrc"
         "target/**"
+        # keep-sorted end
       ];
+
       programs = {
         # keep-sorted start
         alejandra.enable = true;
