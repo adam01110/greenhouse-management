@@ -1,9 +1,8 @@
 #![no_std]
 
-//! Shared telemetry types for the firmware and host.
+//! Shared telemetry types and allocation-free UART encoding.
 //!
-//! These are in-memory values, not a wire encoding. The UART protocol uses
-//! comma-separated ASCII fields with CRLF line endings.
+//! Frames contain comma-separated ASCII fields and end with CRLF.
 
 /// A raw 10-bit soil-moisture ADC reading, not a calibrated percentage.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -47,6 +46,36 @@ pub enum Message {
         /// Device uptime in milliseconds, wrapping after `u32::MAX`.
         uptime_ms: u32,
     },
+}
+
+impl Message {
+    /// Streams one complete frame, including CRLF, without buffering it.
+    ///
+    /// # Errors
+    ///
+    /// Returns the writer's first error unchanged. A failed write may have
+    /// already emitted a partial frame; output is not rolled back.
+    pub fn write_to<W: ufmt::uWrite>(&self, writer: &mut W) -> Result<(), W::Error> {
+        match self {
+            Self::Data {
+                device_id,
+                uptime_ms,
+                moisture_raw,
+                pump_on,
+            } => ufmt::uwrite!(
+                writer,
+                "DATA,{},{},{},{}\r\n",
+                device_id,
+                uptime_ms,
+                moisture_raw.get(),
+                u8::from(*pump_on)
+            ),
+            Self::Heartbeat {
+                device_id,
+                uptime_ms,
+            } => ufmt::uwrite!(writer, "HB,{},{}\r\n", device_id, uptime_ms),
+        }
+    }
 }
 
 #[cfg(test)]
