@@ -1,10 +1,10 @@
 # Protocol and firmware implementation choices
 
-The implemented code covers shared telemetry types, an encoder and the Uno's
-startup, timer-driven blink and power-down programs. It does not run an
-irrigation loop.
-Neither the firmware nor the server consumes the shared protocol crate yet.
-The server is a scaffold while its database and HTTP behavior are researched.
+The firmware samples A0, sends DATA/HB frames through the shared encoder and
+reports its commanded D8 output state. A potentiometer and LED substitute for
+the soil sensor and pump in Wokwi. The output stays off: this implementation
+measures and reports, but doesn't run an irrigation loop. The server remains a
+scaffold while its database and HTTP behavior are researched.
 
 ## Crates and build layout
 
@@ -117,21 +117,52 @@ that shared mutable state and avoids a UART-duration critical section around
 output while timer interrupts run. UART writes still block the calling code;
 this is not asynchronous transmission.
 
-The pinned UART writer's error type is `Infallible`. Startup handles that
-uninhabited error branch with an exhaustive match rather than a panic or a
-blanket ignored result. This only describes the driver's API: it doesn't prove
-that a receiver was connected or received the bytes.
+The pinned UART writer's error type is `Infallible`. Each frame write handles
+that uninhabited error branch with an exhaustive match rather than a panic or
+a blanket ignored result. This only describes the driver's API: it doesn't
+prove that a receiver was connected or received the bytes.
 
-Startup still prints the same banner text and toggles D13 immediately, then
-once per elapsed second without a blocking delay. The banner line and
-following blank line now use explicit CRLF. This text is not a DATA or HB
-message. Live telemetry hasn't been wired into the firmware, and whether to
-keep diagnostic text on that channel remains a separate integration decision.
+The firmware no longer prints a startup banner: UART output contains only
+protocol frames. D13 still toggles immediately and once per elapsed second as
+a status indicator, without a blocking delay.
 
 The existing console API remains available. Its formatted `println!` emits LF,
 while the empty form emits CRLF. It also drops output before initialization
 and ignores write errors. Its documentation now describes those differences;
 it should not be mistaken for the protocol encoder.
+
+## Sampling and telemetry scheduling
+
+The ADC explicitly uses AVcc as its reference, matching the simulated 5V Uno
+supply and the potentiometer connected between 5V and GND. A0 is read through
+the pinned HAL's blocking, 10-bit ADC API. This measures the simulator's analog
+input, not calibrated soil moisture. Sensor disconnection and stuck values
+can't be diagnosed from the numeric range alone.
+
+The first DATA frame is sent immediately after initialization, then at five
+second intervals. HB starts after 60 seconds and repeats at that interval.
+Both schedules compare wrapping elapsed milliseconds and skip missed periods
+rather than transmitting a catch-up burst. ADC sampling and UART output occur
+in the main loop, not in the timer ISR. A DATA timestamp is read after ADC
+conversion. If DATA and HB fall due together, blocking DATA output can delay
+the HB timestamp by a few milliseconds; this is not a hard-real-time scheduler.
+
+Raw values pass through `MoistureRaw::new`. An out-of-range value would skip
+that DATA sample rather than be clamped or assigned an invented ERR code.
+The HAL's actual 10-bit result is in range; this guard doesn't detect a broken
+sensor. HB scheduling continues independently of whether a sample is valid.
+
+D8 is configured as an output and held LOW. The Wokwi LED has its anode fed
+through a 330-ohm resistor from D8 and its cathode at GND, so HIGH represents
+on. `pump.is_set_high()` reports this commanded state, not water flow or motor
+feedback. It isn't inverted based on a presumed active-low relay. A real pump
+needs an appropriate driver and its polarity must be confirmed before using
+this firmware with it. No thresholds or automatic watering are defined.
+
+Device ID 0 is a provisional simulator identity, not a server allocation.
+Automatic assignment would need a registration/configuration exchange and
+startup identity rules; none are defined by the existing telemetry frames.
+The firmware doesn't persist an assigned ID or treat 0 as a reserved value.
 
 ## A hardware-driven millisecond counter
 
@@ -144,10 +175,11 @@ rejects a different board clock rather than silently giving it the wrong rate.
 
 Initialization stops Timer0, masks its interrupts, configures CTC and resets
 the counter before starting it. A write-one-to-clear operation removes any
-pending compare-A flag. The startup banner is sent before initialization, and
-global interrupts are enabled only after peripheral and ISR state is ready.
+pending compare-A flag. Global interrupts are enabled only after peripheral
+and ISR state is ready; there is no UART output during clock initialization.
 Timer0 and its compare-A vector are reserved for uptime. This also prevents
-using Timer0 PWM on Uno D5/D6; it doesn't allocate a pump pin or change D8/D13.
+using Timer0 PWM on Uno D5/D6; it doesn't allocate a pump pin or change
+D8/D13.
 
 The ISR only increments a `u32` with `wrapping_add`. A `Mutex<Cell<u32>>` and
 short `interrupt::free` reads prevent torn multi-byte values on the 8-bit CPU.
@@ -224,9 +256,31 @@ cc -std=c11 -Wall -Wextra -Werror -o /tmp/uptime-sim tests/uptime-sim.c $simavr_
 ```
 
 The simulator check passed on debug and release firmware with each measured
-interval within 32 microseconds of one nominal second. That tolerance rejects the
-64,000-cycle interval error that OCR0A=250 would introduce at 16 MHz.
-This is an additional executable check, not part of `just test`.
+interval within 32 microseconds of one nominal second. That tolerance rejects
+the 64,000-cycle interval error that OCR0A=250 would introduce at 16 MHz. This
+is an additional executable check, not part of `just test`.
+
+The [telemetry simulator test](../tests/telemetry-sim.c) runs the actual ELF
+through its first heartbeat. ADC0 is driven with 0, 2500 and 5000 mV in
+rotation against a simulated 5V AVcc reference. It verifies the resulting 0,
+511/512 and 1023 raw readings, CRLF framing, device ID, five-second cadence
+and heartbeat timestamp. A D8 observer rejects any HIGH transition, and
+register checks require an output actively held LOW rather than an
+unconfigured input. Debug and release firmware each passed with 13 DATA frames
+and one HB frame.
+
+```console
+simavr_flags=$(pkg-config --cflags --libs simavr)
+test_source=tests/telemetry-sim.c
+cc -std=c11 -Wall -Wextra -Werror -o /tmp/telemetry $test_source $simavr_flags
+/tmp/telemetry src/firmware/target/avr-none/debug/greenhouse-firmware.elf
+```
+
+In Chromium, the compiled release HEX also ran in Wokwi with the committed
+circuit. Moving the potentiometer from midpoint to both endpoints produced
+raw values 512, 0 and 1023 in DATA frames. HB frames were observed at 60003 and
+120003 ms, with further heartbeats continuing. The D8 indicator stayed off.
+These checks exercise acquisition and transmission, not a server receiver.
 
 Two tests cover every `u16` input to the ADC constructor. Six test encoding:
 minimum and maximum DATA/HB fields, plus failures at every byte offset for each
@@ -234,13 +288,12 @@ maximum frame. These are host tests, not an AVR test harness. The separate AVR
 checks establish compilation compatibility, not live UART integration.
 
 Simulation checks the configured clock's nominal tick and rollover behavior,
-not the physical oscillator, sensor accuracy, UART delivery or actuator safety.
-Those properties have not been validated on a physical board. Generating HEX doesn't
-upload it; no flashing was performed for these checks. Firmware size and UART
-latency have not been benchmarked.
+not the physical oscillator, sensor accuracy, UART delivery or actuator
+safety. Those properties have not been validated on a physical board.
+Generating HEX doesn't upload it; no flashing was performed for these checks.
+Firmware size and UART latency have not been benchmarked.
 
-The remaining implementation includes sensor acquisition, telemetry scheduling
-and receiver parsing. ERR codes and payloads, watering thresholds and local
-safety rules still need decisions. The intended system
-controls watering locally rather than relying on the server, but that control
-loop and the server's storage/API are not implemented by these changes.
+Receiver parsing and server-assigned identity remain unimplemented. ERR codes
+and payloads, watering thresholds and local safety rules still need decisions.
+The intended system controls watering locally rather than relying on the
+server, but that loop and the server's storage/API are not implemented here.

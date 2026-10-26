@@ -24,6 +24,7 @@ bench = false
 
 [dependencies]
 avr-device = "0.8.1"
+greenhouse-protocol = { path = "../protocol" }
 panic-halt = "1.0.0"
 ufmt = "0.2.0"
 

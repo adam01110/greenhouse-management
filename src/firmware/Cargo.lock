@@ -258,7 +258,15 @@ version = "0.1.0"
 dependencies = [
  "arduino-hal",
  "avr-device",
+ "greenhouse-protocol",
  "panic-halt",
+ "ufmt",
+]
+
+[[package]]
+name = "greenhouse-protocol"
+version = "0.1.0"
+dependencies = [
  "ufmt",
 ]
 

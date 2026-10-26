@@ -18,6 +18,20 @@
       "attrs": {
         "value": "512"
       }
+    },
+    {
+      "id": "pump",
+      "type": "wokwi-led",
+      "top": -70,
+      "left": 210,
+      "attrs": { "color": "blue", "label": "Pump command" }
+    },
+    {
+      "id": "pump-resistor",
+      "type": "wokwi-resistor",
+      "top": -20,
+      "left": 130,
+      "attrs": { "value": "330" }
     }
   ],
   "connections": [
@@ -38,6 +52,9 @@
       "uno:A0",
       "green",
       []
-    ]
+    ],
+    ["uno:8", "pump-resistor:1", "blue", []],
+    ["pump-resistor:2", "pump:A", "blue", []],
+    ["pump:C", "uno:GND.2", "black", []]
   ]
 }
