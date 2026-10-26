@@ -55,6 +55,19 @@ HEX files are written under `src/firmware/target/avr-none/debug/` or
 `src/firmware/target/avr-none/release/` as `greenhouse-firmware.hex`.
 They can be used with Wokwi's Arduino Uno simulator.
 
+## Wokwi circuit
+
+[simulation/diagram.json](simulation/diagram.json) connects a potentiometer's
+VCC to the simulated Uno's 5V, GND to GND and SIG to A0. It substitutes an analog
+input for the moisture sensor; no pump or driver is connected.
+
+In a new Wokwi Uno project, replace `diagram.json` with this file. Build with
+`just release-hex`, then use F1 → **Upload Firmware and Start Simulation** and
+select `src/firmware/target/avr-none/release/greenhouse-firmware.hex`.
+This runs the compiled Rust firmware, not the default Arduino sketch.
+The circuit loaded and the existing firmware started in Chromium; ADC readings
+and telemetry are not implemented or verified by that check.
+
 ## Arduino Uno
 
 Connect an Uno over USB and run `just flash` to upload the firmware using
