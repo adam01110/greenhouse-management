@@ -8,8 +8,9 @@ Uno. A Rust server receives measurements over UART, stores them in SQLite and
 exposes a read-only HTTP API for a browser dashboard.
 
 Currently, the firmware provides a blink example, a UART console and a power-down
-program. The server and shared protocol crates are scaffolds; irrigation, data
-storage, the HTTP API and the dashboard are not implemented yet.
+program. The shared protocol library defines telemetry types; the server remains
+a scaffold. Irrigation, data storage, the HTTP API and the dashboard are not
+implemented yet.
 
 ## Layout
 
