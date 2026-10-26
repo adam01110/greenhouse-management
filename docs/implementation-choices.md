@@ -236,44 +236,34 @@ The following commands were rerun while documenting this implementation:
 | --- | --- |
 | `just check` | Exit 0; host, firmware and shared-library AVR checks |
 | `just lint` | Exit 0; Clippy rejects warnings on the same targets |
-| `just test` | Exit 0; eight host tests passed |
+| `just test` | Exit 0; eight protocol tests and two simulator tests per ELF profile |
 | `just hex` | Exit 0; debug firmware built and converted to Intel HEX |
 | `just release-hex` | Exit 0; release firmware built and converted to HEX |
 
-The optional [simavr test](../tests/uptime-sim.c) loads the actual firmware ELF,
-checks Timer0 registers and measures D13 transitions in simulated CPU cycles.
-It also injects a near-`u32::MAX` counter value into simulated RAM and checks
-that both the counter and LED scheduling survive rollover. This injection is
-test-only; production firmware has no synthetic clock or test telemetry.
+The Rust [firmware integration tests](../src/firmware-tests/tests/firmware.rs)
+load the actual Uno ELF through `simavr-ffi`. `just test` builds debug and
+release firmware, runs the eight protocol tests and two simulator tests,
+then repeats the simulator tests against the release ELF.
 
-With simavr development files, pkg-config and a native C compiler available:
+The timer test checks Timer0 registers and D13 intervals within 512 CPU cycles
+(32 microseconds) of one second. It locates MILLIS with the Rust `object` ELF
+reader, injects a near-`u32::MAX` value only with interrupts enabled, and checks
+rollover and subsequent LED timing. Production firmware has no test clock.
 
-```console
-just hex
-simavr_flags=$(pkg-config --cflags --libs simavr)
-cc -std=c11 -Wall -Wextra -Werror -o /tmp/uptime-sim tests/uptime-sim.c $simavr_flags
-/tmp/uptime-sim src/firmware/target/avr-none/debug/greenhouse-firmware.elf
-```
+The telemetry test drives ADC0 with 0, 2500 and 5000 mV against a 5V reference.
+It checks raw values 0, 511/512 and 1023, complete CRLF frames, device ID,
+immediate first DATA, five-second cadence and the first heartbeat. Both
+profiles produce 13 DATA frames and one HB. A GPIO observer rejects any D8
+HIGH transition; DDRB/PORTB checks require a driven-low output, not an input.
 
-The simulator check passed on debug and release firmware with each measured
-interval within 32 microseconds of one nominal second. That tolerance rejects
-the 64,000-cycle interval error that OCR0A=250 would introduce at 16 MHz. This
-is an additional executable check, not part of `just test`.
-
-The [telemetry simulator test](../tests/telemetry-sim.c) runs the actual ELF
-through its first heartbeat. ADC0 is driven with 0, 2500 and 5000 mV in
-rotation against a simulated 5V AVcc reference. It verifies the resulting 0,
-511/512 and 1023 raw readings, CRLF framing, device ID, five-second cadence
-and heartbeat timestamp. A D8 observer rejects any HIGH transition, and
-register checks require an output actively held LOW rather than an
-unconfigured input. Debug and release firmware each passed with 13 DATA frames
-and one HB frame.
+The development shell includes libclang and the native libraries needed to
+build the simulator binding. To run these tests separately from the repository
+root:
 
 ```console
-simavr_flags=$(pkg-config --cflags --libs simavr)
-test_source=tests/telemetry-sim.c
-cc -std=c11 -Wall -Wextra -Werror -o /tmp/telemetry $test_source $simavr_flags
-/tmp/telemetry src/firmware/target/avr-none/debug/greenhouse-firmware.elf
+just firmware firmware-release
+cargo test -p greenhouse-firmware-tests
+GH_FIRMWARE_PROFILE=release cargo test -p greenhouse-firmware-tests
 ```
 
 In Chromium, the compiled release HEX also ran in Wokwi with the committed

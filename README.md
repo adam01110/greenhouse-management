@@ -50,7 +50,7 @@ manifest and AVR configuration.
 | `just build` | Build host crates and firmware |
 | `just check` | Type-check both workspaces |
 | `just lint` | Run Clippy for host and firmware, rejecting warnings |
-| `just test` | Run host tests with Nextest |
+| `just test` | Run protocol tests and debug/release firmware simulations |
 | `just fmt` | Format Rust, TOML and Nix files |
 | `just release` | Build both workspaces with release profiles |
 | `just hex` | Build debug firmware and convert it to Intel HEX |

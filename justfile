@@ -48,9 +48,10 @@ firmware-lint:
 protocol-avr-lint:
     cargo clippy -p greenhouse-protocol --config src/firmware/.cargo/config.toml -- -D warnings
 
-# Run host tests with Nextest; AVR binaries have no host test harness.
-test:
-    cargo nextest run --workspace --no-tests pass
+# Run protocol tests and simulate debug/release firmware.
+test: firmware firmware-release
+    GH_FIRMWARE_PROFILE=debug cargo nextest run --workspace --no-tests pass
+    GH_FIRMWARE_PROFILE=release cargo nextest run -p greenhouse-firmware-tests
 
 # Build optimized host binaries and Uno firmware.
 release: host-release firmware-release

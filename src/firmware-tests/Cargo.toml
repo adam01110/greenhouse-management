@@ -1,0 +1,15 @@
+[package]
+name = "greenhouse-firmware-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+object = { version = "0.40", default-features = false, features = [
+  "read_core",
+  "elf",
+] }
+simavr-ffi = "=1.2.7"
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"

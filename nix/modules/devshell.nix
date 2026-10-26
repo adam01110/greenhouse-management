@@ -36,6 +36,8 @@
     };
   in {
     devShells.default = pkgs.mkShell {
+      BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${pkgs.stdenv.cc.cc}/include -isystem ${pkgs.glibc.dev}/include";
+      LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
       packages = with pkgs; [
         rustToolchain
         pkgsCross.avr.buildPackages.gcc
@@ -44,7 +46,12 @@
         # keep-sorted start
         avrdude
         just
+        libelf
+        llvmPackages.libclang
+        pkg-config
         ravedude
+        zlib
+        zstd
         # keep-sorted end
 
         # keep-sorted start

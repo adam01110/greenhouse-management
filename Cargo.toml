@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src/server", "src/protocol"]
+members = ["src/server", "src/protocol", "src/firmware-tests"]
 exclude = ["src/firmware"]
 
 [workspace.lints.rust]
