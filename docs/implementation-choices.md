@@ -107,12 +107,12 @@ there is no parser or recovery policy implemented in this crate.
 
 ## UART ownership in firmware
 
-[The entry point](../src/firmware/src/main.rs) now owns a mutable UART handle
+[The firmware library](../src/firmware/src/lib.rs) owns a mutable UART handle
 and passes it directly to `ufmt`. Previously it installed the handle in the
-[global console](../src/firmware/src/lib.rs) and printed through that API.
+[global console](../src/firmware/src/console.rs) and printed through that API.
 
 The console protects access with `interrupt::free`, holding interrupts off
-through formatting and synchronous transmission. Main-loop ownership avoids
+through formatting and synchronous transmission. Library-run-loop ownership avoids
 that shared mutable state and avoids a UART-duration critical section around
 output while timer interrupts run. UART writes still block the calling code;
 this is not asynchronous transmission.
@@ -205,7 +205,7 @@ validation.
 The root workspace forbids unsafe code in the host and protocol crates.
 Firmware denies it by default but allows a reasoned, narrowly scoped exception.
 The current PAC sleep-mode bit write needs such an unsafe operation. Neither
-policy claims that dependencies contain no unsafe code. The main entry point
+policy claims that dependencies contain no unsafe code. The firmware run loop
 also needs a scoped unsafe block to enable interrupts after initialization,
 outside any critical section.
 
@@ -240,7 +240,7 @@ The following commands were rerun while documenting this implementation:
 | `just hex` | Exit 0; debug firmware built and converted to Intel HEX |
 | `just release-hex` | Exit 0; release firmware built and converted to HEX |
 
-The Rust [firmware integration tests](../src/firmware-tests/tests/firmware.rs)
+The Rust [firmware integration tests](../src/firmware-tests/src/lib.rs)
 load the actual Uno ELF through `simavr-ffi`. `just test` builds debug and
 release firmware, runs the eight protocol tests and two simulator tests,
 then repeats the simulator tests against the release ELF.
