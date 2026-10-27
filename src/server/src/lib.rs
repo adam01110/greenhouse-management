@@ -21,10 +21,12 @@ impl ReceivedAtMs {
     /// Returns `InvalidTime` for negative values or values exceeding `i64::MAX`.
     pub fn new(value: i128) -> Result<Self, StoreError> {
         let value = i64::try_from(value).map_err(|_error| StoreError::InvalidTime)?;
+
         if value < 0 {
-            return Err(StoreError::InvalidTime);
+            Err(StoreError::InvalidTime)
+        } else {
+            Ok(Self(value))
         }
-        Ok(Self(value))
     }
 }
 
@@ -59,8 +61,10 @@ impl Store {
     pub fn open(path: &Path) -> Result<Self, StoreError> {
         let mut connection = Connection::open(path)?;
         connection.busy_timeout(Duration::from_secs(5))?;
+
         store::initialize(&mut connection)?;
         store::configure(&connection)?;
+
         Ok(Self { connection })
     }
 
@@ -77,8 +81,10 @@ impl Store {
         let tx = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+
         let id = store::register_token(&tx, token, received, allow_provision)?;
         tx.commit()?;
+
         Ok(id)
     }
 
@@ -90,8 +96,10 @@ impl Store {
         let tx = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+
         store::insert_message(&tx, message, received)?;
         tx.commit()?;
+
         Ok(())
     }
 }

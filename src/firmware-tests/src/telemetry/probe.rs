@@ -1,12 +1,13 @@
 use std::{cell::RefCell, ffi::c_void, ops::RangeInclusive};
 
 use super::frame::{self, Frame, Heartbeat, Sample};
-use crate::{Simulator, Subscription, ffi, ioctl, irq, register_notify};
+use crate::{ffi, ioctl, irq, register_notify, Simulator, Subscription};
 
 pub(super) const ADC_INPUTS: [(u32, RangeInclusive<u16>); 3] =
     [(0, 0..=0), (2500, 511..=512), (5000, 1023..=1023)];
+
 const MAX_FRAME_BYTES: usize = 39;
-const HEARTBEAT_DEADLINE: u64 = 62 * 16_000_000;
+const HEARTBEAT_DEADLINE: u64 = 62 * 16 * 1000 * 1000;
 
 #[derive(Default)]
 pub(super) struct TelemetryState {
@@ -35,6 +36,7 @@ impl TelemetryProbe {
             ioctl(b'a', b'd', b'c', b'0'),
             ffi::ADC_IRQ_ADC0.cast_signed(),
         );
+
         Self {
             state: RefCell::new(TelemetryState {
                 adc_input: adc_input.as_ptr(),
@@ -60,6 +62,7 @@ impl TelemetryProbe {
             ioctl(b'i', b'o', b'g', b'B'),
             ffi::IOPORT_IRQ_PIN0.cast_signed(),
         );
+
         [
             register_notify(adc, Some(adc_requested), &self.state),
             register_notify(uart, Some(uart_byte), &self.state),
@@ -69,15 +72,18 @@ impl TelemetryProbe {
 
     pub fn record_until_heartbeat(&self, simulator: &mut Simulator) -> Recording {
         let mut recording = Recording::default();
+
         while recording.heartbeats.is_empty() && simulator.cycle() < HEARTBEAT_DEADLINE {
             simulator.step();
             self.collect_frames(&mut recording);
         }
+
         recording
     }
 
     fn collect_frames(&self, recording: &mut Recording) {
         let mut state = self.state.borrow_mut();
+
         for bytes in std::mem::take(&mut state.frames) {
             match frame::parse(&bytes) {
                 Frame::Data(sample) => {
@@ -91,6 +97,7 @@ impl TelemetryProbe {
 
     pub fn assert_uart_complete(&self) {
         let state = self.state.borrow();
+
         assert!(state.line.is_empty(), "UART ended with an incomplete frame");
         assert!(
             !state.line_overflow,
@@ -99,8 +106,10 @@ impl TelemetryProbe {
     }
 
     pub fn assert_pump_stayed_off(&self, simulator: &Simulator) {
+        // ATmega328P data-space registers for D8 / PB0 direction and output.
         const DDRB: usize = 0x24;
         const PORTB: usize = 0x25;
+
         assert!(!self.state.borrow().pump_high, "D8/PB0 went HIGH");
         assert_ne!(simulator.read(DDRB) & 1, 0, "D8 must be an output");
         assert_eq!(simulator.read(PORTB) & 1, 0, "D8 must be driven LOW");

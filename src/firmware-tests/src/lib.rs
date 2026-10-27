@@ -11,11 +11,12 @@ use simavr_ffi as ffi;
 mod telemetry;
 mod timer;
 
-const CLOCK_HZ: u32 = 16_000_000;
+const CLOCK_HZ: u32 = 16 * 1000 * 1000;
 
 struct Simulator {
     cpu: NonNull<ffi::avr_t>,
-    _firmware: Box<ffi::elf_firmware_t>,
+    #[expect(dead_code, reason = "simavr borrows firmware data until termination")]
+    firmware: Box<ffi::elf_firmware_t>,
 }
 
 impl Simulator {
@@ -23,19 +24,24 @@ impl Simulator {
         let firmware_path = firmware_path();
         let path = CString::new(firmware_path.to_string_lossy().as_bytes())
             .expect("firmware path has no NUL byte");
+
         // SAFETY: zero is the documented empty initialization for elf_firmware_t.
         let mut firmware = Box::new(unsafe { std::mem::zeroed() });
+
         // SAFETY: path is NUL-terminated and firmware is writable for the call.
         assert_eq!(
             unsafe { ffi::elf_read_firmware(path.as_ptr(), &raw mut *firmware) },
             0
         );
+
         let mcu = c"atmega328p";
         // SAFETY: mcu is a static NUL-terminated MCU name.
         let cpu = NonNull::new(unsafe { ffi::avr_make_mcu_by_name(mcu.as_ptr()) })
             .expect("ATmega328P simulator is available");
+
         // SAFETY: cpu is a newly allocated simulator instance.
         assert_eq!(unsafe { ffi::avr_init(cpu.as_ptr()) }, 0);
+
         // SAFETY: cpu and firmware remain alive for the simulator lifetime.
         unsafe {
             (*cpu.as_ptr()).frequency = CLOCK_HZ;
@@ -44,10 +50,8 @@ impl Simulator {
             (*cpu.as_ptr()).aref = 5000;
             ffi::avr_load_firmware(cpu.as_ptr(), &raw mut *firmware);
         }
-        Self {
-            cpu,
-            _firmware: firmware,
-        }
+
+        Self { cpu, firmware }
     }
 
     fn cycle(&self) -> u64 {

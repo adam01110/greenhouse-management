@@ -14,7 +14,7 @@ pub enum HostFrame {
 }
 
 impl DeviceFrame {
-    /// Maximum complete frame length in bytes, including CRLF.
+    /// `REG,` plus 32 token digits and CRLF.
     pub const MAX_LEN: usize = 38;
 
     /// Streams a complete frame, including CRLF.
@@ -34,7 +34,7 @@ impl DeviceFrame {
 }
 
 impl HostFrame {
-    /// Maximum complete frame length in bytes, including CRLF.
+    /// `ID,` plus 32 token digits, a comma, three ID digits and CRLF.
     pub const MAX_LEN: usize = 41;
 
     /// Streams a complete frame, including CRLF.

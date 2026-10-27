@@ -10,11 +10,11 @@ rusqlite = { version = "0.41", default-features = false, features = [
   "bundled",
   "cache",
 ] }
-thiserror = "2"
-ufmt = "0.2"
+thiserror = "2.0"
+ufmt = "0.2.0"
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = "3.27"
 
 [lints]
 workspace = true

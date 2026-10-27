@@ -1,7 +1,8 @@
 use greenhouse_protocol::{
-    DeviceFrame, DeviceToken, HostFrame, Message, MoistureRaw, parse_device_line, parse_host_line,
+    parse_device_line, parse_host_line, DeviceFrame, DeviceToken, HostFrame, Message, MoistureRaw,
 };
 
+// Bytes pair the hexadecimal digits in TOKEN; the mixed pattern exercises every digit.
 const TOKEN_BYTES: [u8; 16] = [
     0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
 ];
@@ -9,12 +10,15 @@ const TOKEN: &str = "0123456789abcdeffedcba9876543210";
 
 #[derive(Debug, Eq, PartialEq)]
 struct WriteError(usize);
+
 struct Writer {
     bytes: Vec<u8>,
     limit: usize,
 }
+
 impl ufmt::uWrite for Writer {
     type Error = WriteError;
+
     fn write_str(&mut self, value: &str) -> Result<(), Self::Error> {
         for byte in value.bytes() {
             if self.bytes.len() == self.limit {
@@ -22,6 +26,7 @@ impl ufmt::uWrite for Writer {
             }
             self.bytes.push(byte);
         }
+
         Ok(())
     }
 }
@@ -29,8 +34,11 @@ impl ufmt::uWrite for Writer {
 #[test]
 fn token_roundtrip_and_byte_access() {
     let token = DeviceToken::new(TOKEN_BYTES);
+
     assert_eq!(token.as_bytes(), &TOKEN_BYTES);
     assert_eq!(DeviceToken::parse(TOKEN), Ok(token));
+
+    // Reject empty, short, long, uppercase, non-hex and non-ASCII tokens.
     for invalid in [
         "",
         "0123456789abcdeffedcba987654321",
@@ -48,27 +56,32 @@ fn register_and_assignment_roundtrip_and_max_lengths() {
     let token = DeviceToken::new(TOKEN_BYTES);
     let reg = DeviceFrame::Register { token };
     let expected = format!("REG,{TOKEN}\r\n");
-    assert_eq!(expected.len(), 38);
     let mut writer = Writer {
         bytes: Vec::new(),
         limit: usize::MAX,
     };
+
+    assert_eq!(expected.len(), DeviceFrame::MAX_LEN);
     assert_eq!(reg.write_to(&mut writer), Ok(()));
     assert_eq!(writer.bytes, expected.as_bytes());
     assert_eq!(parse_device_line(&writer.bytes), Ok(reg));
+
     for id in [0, 255] {
         let assignment = HostFrame::Assigned {
             token,
             device_id: id,
         };
         let expected = format!("ID,{TOKEN},{id}\r\n");
+
         if id == 255 {
-            assert_eq!(expected.len(), 41);
+            assert_eq!(expected.len(), HostFrame::MAX_LEN);
         }
+
         let mut writer = Writer {
             bytes: Vec::new(),
             limit: usize::MAX,
         };
+
         assert_eq!(assignment.write_to(&mut writer), Ok(()));
         assert_eq!(writer.bytes, expected.as_bytes());
         assert_eq!(parse_host_line(&writer.bytes), Ok(assignment));
@@ -79,6 +92,8 @@ fn register_and_assignment_roundtrip_and_max_lengths() {
 fn registration_writer_failures_preserve_error_and_prefix() {
     let token = DeviceToken::new(TOKEN_BYTES);
     let expected = format!("REG,{TOKEN}\r\n");
+
+    // Fail after every possible byte and verify both the error and written prefix.
     for limit in 0..expected.len() {
         let mut writer = Writer {
             bytes: Vec::new(),
@@ -90,7 +105,9 @@ fn registration_writer_failures_preserve_error_and_prefix() {
         );
         assert_eq!(writer.bytes, expected.as_bytes().get(..limit).unwrap());
     }
+
     let expected = format!("ID,{TOKEN},255\r\n");
+
     for limit in 0..expected.len() {
         let mut writer = Writer {
             bytes: Vec::new(),
@@ -132,12 +149,14 @@ fn telemetry_roundtrip_at_limits() {
             uptime_ms: u32::MAX,
         },
     ];
+
     for message in messages {
         let frame = DeviceFrame::Telemetry(message);
         let mut writer = Writer {
             bytes: Vec::new(),
             limit: usize::MAX,
         };
+
         assert_eq!(frame.write_to(&mut writer), Ok(()));
         assert_eq!(parse_device_line(&writer.bytes), Ok(frame));
     }
@@ -145,6 +164,7 @@ fn telemetry_roundtrip_at_limits() {
 
 #[test]
 fn rejects_bad_device_lines() {
+    // Reject malformed framing, numeric bounds, invalid fields and host-only frames.
     for line in [
         &b"HB,0000000000000000000000000000000000,0\r\n"[..],
         &b"HB,0,0\n"[..],
@@ -175,6 +195,7 @@ fn rejects_bad_device_lines() {
 
 #[test]
 fn rejects_bad_host_lines() {
+    // Reject invalid IDs, malformed framing, bad tokens and device-only frames.
     for line in [
         &b"ID,0123456789abcdeffedcba9876543210,0000\r\n"[..],
         &b"ID,0123456789abcdeffedcba9876543210,256\r\n"[..],

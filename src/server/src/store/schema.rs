@@ -1,6 +1,7 @@
 use crate::StoreError;
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior};
 
+// SQLite application ID is the ASCII identifier "GRHE".
 const APPLICATION_ID: i64 = 0x4752_4845;
 const VERSION: i64 = 1;
 const SCHEMA: [(&str, &str); 5] = [
@@ -54,8 +55,10 @@ struct Metadata {
 
 pub(crate) fn initialize(connection: &mut Connection) -> Result<(), StoreError> {
     let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+
     initialize_schema(&tx)?;
     tx.commit()?;
+
     Ok(())
 }
 
@@ -73,16 +76,14 @@ fn metadata(tx: &Transaction<'_>) -> Result<Metadata, StoreError> {
 
 fn initialize_schema(tx: &Transaction<'_>) -> Result<(), StoreError> {
     let current = metadata(tx)?;
-    if current
+    match current
         == (Metadata {
             application: 0,
             version: 0,
             objects: 0,
-        })
-    {
-        create_schema(tx)
-    } else {
-        verify_schema(tx, &current)
+        }) {
+        true => create_schema(tx),
+        false => verify_schema(tx, &current),
     }
 }
 
@@ -92,13 +93,16 @@ fn verify_schema(tx: &Transaction<'_>, current: &Metadata) -> Result<(), StoreEr
         version: VERSION,
         objects: i64::try_from(SCHEMA.len()).map_err(|_size| StoreError::Schema)?,
     };
-    if current != &expected {
-        return Err(StoreError::Schema);
+
+    if current == &expected {
+        for (name, sql) in SCHEMA {
+            verify_object(tx, name, sql)?;
+        }
+
+        Ok(())
+    } else {
+        Err(StoreError::Schema)
     }
-    for (name, sql) in SCHEMA {
-        verify_object(tx, name, sql)?;
-    }
-    Ok(())
 }
 
 fn verify_object(tx: &Transaction<'_>, name: &str, expected: &str) -> Result<(), StoreError> {
@@ -106,18 +110,22 @@ fn verify_object(tx: &Transaction<'_>, name: &str, expected: &str) -> Result<(),
         .prepare_cached("SELECT sql FROM sqlite_schema WHERE name = ?1")?
         .query_row([name], |row| row.get(0))
         .optional()?;
-    if actual.as_deref() != Some(expected) {
-        return Err(StoreError::Schema);
+
+    if actual.as_deref() == Some(expected) {
+        Ok(())
+    } else {
+        Err(StoreError::Schema)
     }
-    Ok(())
 }
 
 fn create_schema(tx: &Transaction<'_>) -> Result<(), StoreError> {
     for (_, sql) in SCHEMA {
         tx.execute_batch(sql)?;
     }
+
     tx.pragma_update(None, "application_id", APPLICATION_ID)?;
     tx.pragma_update(None, "user_version", VERSION)?;
+
     Ok(())
 }
 
@@ -125,7 +133,9 @@ pub(crate) fn configure(connection: &Connection) -> Result<(), StoreError> {
     connection.pragma_update(None, "foreign_keys", true)?;
     ensure_wal(connection)?;
     connection.pragma_update(None, "synchronous", "FULL")?;
+
     let _: String = connection.query_row("SELECT json_object('ok', 1)", [], |row| row.get(0))?;
+
     Ok(())
 }
 

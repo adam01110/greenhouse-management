@@ -1,7 +1,7 @@
 use super::{execute_cached, touch};
 use crate::{ReceivedAtMs, StoreError};
 use greenhouse_protocol::DeviceToken;
-use rusqlite::{OptionalExtension, Transaction, params};
+use rusqlite::{params, OptionalExtension, Transaction};
 
 pub(crate) fn register_token(
     tx: &Transaction<'_>,
@@ -9,14 +9,17 @@ pub(crate) fn register_token(
     received: ReceivedAtMs,
     allow_provision: bool,
 ) -> Result<u8, StoreError> {
-    if let Some(id) = lookup(tx, token)? {
-        touch(tx, id, received)?;
-        return Ok(id);
+    match lookup(tx, token)? {
+        Some(id) => update_existing(tx, id, received),
+        None if allow_provision => allocate(tx, token, received),
+        None => Err(StoreError::UnknownToken),
     }
-    if !allow_provision {
-        return Err(StoreError::UnknownToken);
-    }
-    allocate(tx, token, received)
+}
+
+fn update_existing(tx: &Transaction<'_>, id: u8, received: ReceivedAtMs) -> Result<u8, StoreError> {
+    touch(tx, id, received)?;
+
+    Ok(id)
 }
 
 fn lookup(tx: &Transaction<'_>, token: DeviceToken) -> Result<Option<u8>, StoreError> {
@@ -32,11 +35,13 @@ fn allocate(
     received: ReceivedAtMs,
 ) -> Result<u8, StoreError> {
     let id = next_available_id(tx)?.ok_or(StoreError::ExhaustedIds)?;
+
     execute_cached(
         tx,
         "INSERT INTO device(id, token, first_seen_ms, last_seen_ms) VALUES (?1, ?2, ?3, ?3)",
         params![id, token.as_bytes().as_slice(), received.0],
     )?;
+
     Ok(id)
 }
 

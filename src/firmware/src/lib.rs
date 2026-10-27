@@ -10,7 +10,7 @@ pub use console::put_console;
 pub use console::{__ufmt, __with_console};
 
 const DATA_INTERVAL_MS: u32 = 5000;
-const HEARTBEAT_INTERVAL_MS: u32 = 60_000;
+const HEARTBEAT_INTERVAL_MS: u32 = 60 * 1000;
 
 pub fn run(peripherals: arduino_hal::Peripherals) -> ! {
     let pins = arduino_hal::pins!(peripherals);
@@ -40,6 +40,7 @@ pub fn run(peripherals: arduino_hal::Peripherals) -> ! {
     }
 
     led.toggle();
+
     let mut last_toggle = uptime::millis();
     let mut last_data = last_toggle.wrapping_sub(DATA_INTERVAL_MS);
     let mut last_heartbeat = last_toggle;
