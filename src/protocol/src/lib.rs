@@ -1,8 +1,16 @@
 #![no_std]
 
-//! Shared telemetry types and allocation-free UART encoding.
+//! Shared registration and telemetry types with allocation-free UART encoding.
 //!
 //! Frames contain comma-separated ASCII fields and end with CRLF.
+
+mod decoding;
+mod registration;
+mod token;
+
+pub use decoding::{ParseError, parse_device_line, parse_host_line};
+pub use registration::{DeviceFrame, HostFrame};
+pub use token::DeviceToken;
 
 /// A raw 10-bit soil-moisture ADC reading, not a calibrated percentage.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
