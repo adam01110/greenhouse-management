@@ -5,10 +5,12 @@
 //! Frames contain comma-separated ASCII fields and end with CRLF.
 
 mod decoding;
+mod record;
 mod registration;
 mod token;
 
 pub use decoding::{ParseError, parse_device_line, parse_host_line};
+pub use record::{EEPROM_RECORD_LEN, RecordError, decode_record, encode_record};
 pub use registration::{DeviceFrame, HostFrame};
 pub use token::DeviceToken;
 
