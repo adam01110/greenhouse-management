@@ -104,7 +104,7 @@ fn assignment(parts: &mut Fields<'_>) -> Result<HostFrame, ParseError> {
 /// # Errors
 /// Rejects malformed frames, invalid fields and out-of-range values.
 pub fn parse_device_line(line: &[u8]) -> Result<DeviceFrame, ParseError> {
-    let mut parts = fields(line, 38)?;
+    let mut parts = fields(line, DeviceFrame::MAX_LEN)?;
     let result = device(&mut parts)?;
     end(&mut parts)?;
     Ok(result)
@@ -115,7 +115,7 @@ pub fn parse_device_line(line: &[u8]) -> Result<DeviceFrame, ParseError> {
 /// # Errors
 /// Rejects malformed frames, invalid fields and out-of-range values.
 pub fn parse_host_line(line: &[u8]) -> Result<HostFrame, ParseError> {
-    let mut parts = fields(line, 41)?;
+    let mut parts = fields(line, HostFrame::MAX_LEN)?;
     let result = assignment(&mut parts)?;
     end(&mut parts)?;
     Ok(result)

@@ -1,11 +1,14 @@
-//! Persistent registration and telemetry storage.
+//! Registration, framed UART ingestion and persistent telemetry storage.
 
 use greenhouse_protocol::{DeviceToken, Message};
 use rusqlite::{Connection, TransactionBehavior};
 use std::{path::Path, time::Duration};
 use thiserror::Error;
 
+mod ingest;
 mod store;
+
+pub use ingest::{Clock, ClockError, IngestError, Ingestor, Rejection, SessionId, SystemClock};
 
 /// Server reception time in Unix milliseconds, never device uptime.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

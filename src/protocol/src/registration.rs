@@ -14,6 +14,9 @@ pub enum HostFrame {
 }
 
 impl DeviceFrame {
+    /// Maximum complete frame length in bytes, including CRLF.
+    pub const MAX_LEN: usize = 38;
+
     /// Streams a complete frame, including CRLF.
     ///
     /// # Errors
@@ -31,6 +34,9 @@ impl DeviceFrame {
 }
 
 impl HostFrame {
+    /// Maximum complete frame length in bytes, including CRLF.
+    pub const MAX_LEN: usize = 41;
+
     /// Streams a complete frame, including CRLF.
     ///
     /// # Errors
