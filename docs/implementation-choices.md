@@ -236,14 +236,14 @@ The following commands were rerun while documenting this implementation:
 | --- | --- |
 | `just check` | Exit 0; host, firmware and shared-library AVR checks |
 | `just lint` | Exit 0; Clippy rejects warnings on the same targets |
-| `just test` | Exit 0; eight protocol tests and two simulator tests per ELF profile |
+| `just test` | Exit 0; eight protocol tests, then simulator/frame checks for both ELF profiles |
 | `just hex` | Exit 0; debug firmware built and converted to Intel HEX |
 | `just release-hex` | Exit 0; release firmware built and converted to HEX |
 
 The Rust [firmware integration tests](../src/firmware-tests/src/lib.rs)
 load the actual Uno ELF through `simavr-ffi`. `just test` builds debug and
-release firmware, runs the eight protocol tests and two simulator tests,
-then repeats the simulator tests against the release ELF.
+release firmware, runs the eight protocol tests and the simulator/frame tests,
+then repeats the firmware test crate against the release ELF.
 
 The timer test checks Timer0 registers and D13 intervals within 512 CPU cycles
 (32 microseconds) of one second. It locates MILLIS with the Rust `object` ELF
