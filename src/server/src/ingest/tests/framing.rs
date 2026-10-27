@@ -45,7 +45,8 @@ fn every_split_registers_and_ingests_history() {
         assert_eq!(
             sql(
                 &dir.path().join("db"),
-                "SELECT count(*) FROM reading WHERE device_uptime_ms=4294967295 AND moisture_raw=1023 AND pump_state=1"
+                "SELECT count(*) FROM reading
+                 WHERE device_uptime_ms = 4294967295 AND moisture_raw = 1023 AND pump_state = 1"
             ),
             1
         );

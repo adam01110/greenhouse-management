@@ -33,7 +33,11 @@ fn clock_and_sql_errors_invalidate_source() {
         .feed(a, REG, &mut Vec::new(), &mut |_| {})
         .expect("register");
     let conn = Connection::open(&path).expect("inspect");
-    conn.execute_batch("CREATE TRIGGER fail_touch BEFORE UPDATE ON device BEGIN SELECT RAISE(ABORT,'failure'); END").expect("trigger");
+    conn.execute_batch(
+        "CREATE TRIGGER fail_touch BEFORE UPDATE ON device
+         BEGIN SELECT RAISE(ABORT, 'failure'); END",
+    )
+    .expect("trigger");
     assert!(matches!(
         ingest.feed(a, b"HB,0,1\r\n", &mut Vec::new(), &mut |_| {}),
         Err(IngestError::Store(StoreError::Sql(_)))

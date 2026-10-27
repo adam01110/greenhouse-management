@@ -82,9 +82,13 @@ fn failed_touch_rolls_back_insert_then_recovers() {
     let id = store
         .register(token(0), time(1), true)
         .expect("provision device");
-    store.connection.execute_batch(
-        "CREATE TRIGGER fail_touch BEFORE UPDATE ON device BEGIN SELECT RAISE(ABORT, 'failure'); END"
-    ).expect("install failing last-seen trigger");
+    store
+        .connection
+        .execute_batch(
+            "CREATE TRIGGER fail_touch BEFORE UPDATE ON device
+         BEGIN SELECT RAISE(ABORT, 'failure'); END",
+        )
+        .expect("install failing last-seen trigger");
 
     let heartbeat = Message::Heartbeat {
         device_id: id,
