@@ -4,5 +4,16 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[dependencies]
+greenhouse-protocol = { path = "../protocol" }
+rusqlite = { version = "0.41", default-features = false, features = [
+  "bundled",
+  "cache",
+] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
 [lints]
 workspace = true
