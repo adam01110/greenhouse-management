@@ -4,6 +4,7 @@ use crate::DeviceToken;
 
 /// Length of a committed EEPROM identity record in bytes.
 pub const EEPROM_RECORD_LEN: usize = 24;
+pub(crate) const COMMIT_MARKER_OFFSET: usize = 3;
 const HEADER: [u8; 4] = [b'G', b'H', 1, 0xa5];
 const CRC: Crc<u32, NoTable> = Crc::<u32, NoTable>::new(&CRC_32_ISO_HDLC);
 
@@ -17,7 +18,7 @@ pub enum RecordError {
 
 const fn checksum(token: &[u8]) -> u32 {
     let mut digest = CRC.digest();
-    let (covered_header, _commit_marker) = HEADER.split_at(3);
+    let (covered_header, _commit_marker) = HEADER.split_at(COMMIT_MARKER_OFFSET);
     digest.update(covered_header);
     digest.update(token);
     digest.finalize()
